@@ -1,0 +1,33 @@
+# 소스 1대 + 레플리카 1대. GTID 기반 비동기 복제, 레플리카는 read_only
+services:
+  source:
+    image: mysql:8.0
+    container_name: lab-mysql-source
+    environment: { MYSQL_ROOT_PASSWORD: root, MYSQL_INITDB_SKIP_TZINFO: "1" }
+    command: --server-id=1 --log-bin=mysql-bin --binlog-format=ROW --gtid-mode=ON --enforce-gtid-consistency=ON
+    ports: ["3307:3306"]
+    volumes: ["./docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro"]
+    healthcheck:   # TCP 로 확인한다. 초기화 중 임시 서버는 네트워크를 열지 않는다
+      { test: ["CMD", "mysql", "-h127.0.0.1", "-uroot", "-proot", "-e", "SELECT 1"], interval: 3s, retries: 60 }
+
+  replica:
+    image: mysql:8.0
+    container_name: lab-mysql-replica
+    environment: { MYSQL_ROOT_PASSWORD: root, MYSQL_INITDB_SKIP_TZINFO: "1" }
+    command: --server-id=2 --relay-log=relay-bin --gtid-mode=ON --enforce-gtid-consistency=ON --read-only=ON
+    ports: ["3308:3306"]
+    healthcheck:
+      { test: ["CMD", "mysql", "-h127.0.0.1", "-uroot", "-proot", "-e", "SELECT 1"], interval: 3s, retries: 60 }
+
+  replica-setup:   # 한 번 돌고 끝난다. 스키마 · 계정은 복제로 레플리카에 넘어간다
+    image: mysql:8.0
+    depends_on:
+      source: { condition: service_healthy }
+      replica: { condition: service_healthy }
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        mysql -hreplica -uroot -proot -e "STOP REPLICA;
+        CHANGE REPLICATION SOURCE TO SOURCE_HOST='source', SOURCE_USER='repl', SOURCE_PASSWORD='repl',
+        SOURCE_AUTO_POSITION=1, GET_SOURCE_PUBLIC_KEY=1; START REPLICA;"
+    restart: "no"

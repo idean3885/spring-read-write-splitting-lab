@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>읽기 분리 부하 발생기</title>
+<style>
+  :root { --bg:#fff; --fg:#1d1f23; --muted:#6b7280; --line:#e5e7eb; --card:#f8fafc; --accent:#2563eb; --bad:#dc2626; --ok:#16a34a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111318; --fg:#e5e7eb; --muted:#9ca3af; --line:#2a2f3a; --card:#181b22; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+  main { max-width:980px; margin:0 auto; padding:24px 16px; }
+  h1 { font-size:22px; margin:0; } .muted { color:var(--muted); }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-top:16px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; }
+  label { display:block; font-size:13px; color:var(--muted); }
+  input, select { width:100%; margin-top:4px; padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); font:inherit; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; align-items:center; }
+  button { padding:10px 18px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+  button.secondary { background:transparent; color:var(--fg); border:1px solid var(--line); font-weight:400; }
+  button:disabled { opacity:.5; cursor:default; }
+  .progress { height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:10px; }
+  .progress > div { height:100%; width:0; background:var(--accent); transition:width .4s; }
+  .env { display:flex; gap:16px; flex-wrap:wrap; font-size:14px; }
+  .pill { padding:2px 10px; border-radius:999px; border:1px solid var(--line); }
+  .pill.bad { border-color:var(--bad); color:var(--bad); } .pill.ok { border-color:var(--ok); color:var(--ok); }
+  iframe { width:100%; height:1100px; border:1px solid var(--line); border-radius:10px; margin-top:16px; background:var(--bg); }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>읽기 분리 부하 발생기</h1>
+  <p class="muted">readOnly 트랜잭션이 실제로 레플리카에 도착하는지, 두 구성(broken · fixed)에 같은 부하를 걸어 서버 쪽 문장 수로 확인한다.</p>
+
+  <section class="panel">
+    <div class="env" id="env">환경 확인 중…</div>
+  </section>
+
+  <section class="panel">
+    <div class="grid">
+      <label>구성<select id="mode"><option value="BOTH">둘 다 (비교)</option><option value="BROKEN">broken 만</option><option value="FIXED">fixed 만</option></select></label>
+      <label>동시 작업자<input id="concurrency" type="number" min="1" max="256"></label>
+      <label>실행 시간 (초, 구성당)<input id="durationSec" type="number" min="3" max="300"></label>
+      <label>읽기 비율 (0~1)<input id="readRatio" type="number" min="0" max="1" step="0.05"></label>
+      <label>집계 구간 (분)<input id="windowMinutes" type="number" min="1" max="1440"></label>
+    </div>
+    <div class="actions">
+      <button id="start">부하 시작</button>
+      <button id="reset" class="secondary">기본값으로</button>
+      <span id="status" class="muted"></span>
+    </div>
+    <div class="progress"><div id="bar"></div></div>
+  </section>
+
+  <section id="result" hidden>
+    <div class="actions"><b id="resultTitle"></b><a id="download" download>보고서 HTML 저장</a><a id="open" target="_blank">새 창으로</a></div>
+    <iframe id="report" title="보고서"></iframe>
+  </section>
+</main>
+<script>
+  const fields = ['mode', 'concurrency', 'durationSec', 'readRatio', 'windowMinutes'];
+  const $ = id => document.getElementById(id);
+  let defaults;
+
+  async function load() {
+    defaults = await (await fetch('/api/defaults')).json();
+    fill(defaults);
+    try {
+      const c = await (await fetch('/api/check')).json();
+      const pill = (name, id) => `<span class="pill ${id === 2 ? 'ok' : 'bad'}">${name} readOnly → ${id === 1 ? '소스' : '레플리카'} (server_id ${id})</span>`;
+      $('env').innerHTML = pill('broken', c.brokenReadOnlyServerId) + pill('fixed', c.fixedReadOnlyServerId)
+        + `<span class="pill">복제 지연 ${c.replicaLagSec < 0 ? '복제 없음' : c.replicaLagSec + '초'}</span>`;
+    } catch (e) { $('env').textContent = 'DB 에 연결하지 못했다. docker compose up -d 를 먼저 실행한다'; }
+    const runs = await (await fetch('/api/runs')).json();
+    if (runs.length) show(runs[0]);
+  }
+
+  function fill(p) { fields.forEach(f => $(f).value = p[f]); }
+
+  async function start() {
+    const body = Object.fromEntries(fields.map(f => [f, f === 'mode' ? $(f).value : Number($(f).value)]));
+    const res = await fetch('/api/runs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) { $('status').textContent = (await res.json()).error; return; }
+    $('start').disabled = true;
+    poll(body.mode === 'BOTH' ? 2 : 1);
+  }
+
+  async function poll(stacks) {
+    const p = await (await fetch('/api/progress')).json();
+    if (p.running) {
+      const done = p.stage === 'fixed' && stacks === 2 ? 1 : 0;
+      const pct = ((done + (p.totalSec ? p.elapsedSec / p.totalSec : 0)) / stacks) * 100;
+      $('bar').style.width = Math.min(100, pct) + '%';
+      $('status').textContent = `${p.stage} 실행 중 · ${p.elapsedSec}/${p.totalSec}초 · ${p.ops.toLocaleString()} ops`;
+      return setTimeout(() => poll(stacks), 500);
+    }
+    $('bar').style.width = '100%';
+    $('start').disabled = false;
+    if (p.error) { $('status').textContent = '실패: ' + p.error; return; }
+    $('status').textContent = '완료';
+    const runs = await (await fetch('/api/runs')).json();
+    show(runs[0]);
+  }
+
+  function show(run) {
+    const url = `/report.html?id=${run.id}`;
+    $('result').hidden = false;
+    $('resultTitle').textContent = `보고서 #${run.id}`;
+    $('report').src = url;
+    $('open').href = url;
+    $('download').href = url;
+    $('download').download = `routing-report-${run.id}.html`;
+  }
+
+  $('start').onclick = start;
+  $('reset').onclick = () => fill(defaults);
+  load();
+</script>
+</body>
+</html>

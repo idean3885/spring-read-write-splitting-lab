@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id 'groovy'
+    id 'org.springframework.boot' version '3.5.9'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'lab'
+java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
+repositories { mavenCentral() }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'mysql:mysql-connector-java:8.0.27'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.apache.groovy:groovy:4.0.25'
+    testImplementation 'org.spockframework:spock-core:2.4-M1-groovy-4.0'
+    testImplementation 'org.spockframework:spock-spring:2.4-M1-groovy-4.0'
+    testImplementation 'org.testcontainers:mysql:1.20.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'passed', 'failed', 'skipped'; exceptionFormat 'full' }
+    // Rancher Desktop 은 소켓 경로가 달라 Testcontainers 가 기본값으로 찾지 못한다
+    def rd = new File(System.getProperty('user.home'), '.rd/docker.sock')
+    if (rd.exists() && !System.getenv('DOCKER_HOST')) {
+        environment 'DOCKER_HOST', "unix://${rd}"
+        environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', '/var/run/docker.sock'
+        environment 'TESTCONTAINERS_RYUK_DISABLED', 'true'
+    }
+}

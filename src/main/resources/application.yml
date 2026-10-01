@@ -1,0 +1,18 @@
+server:
+  port: 8080
+lab:
+  db:
+    source: { host: localhost, port: 3307 }
+    replica: { host: localhost, port: 3308 }
+    username: lab
+    password: lab
+    admin-username: root   # 문장 통계 · 복제 상태 조회용
+    admin-password: root
+    pool-size: 10
+spring:
+  jpa:
+    open-in-view: false
+logging:
+  level:
+    root: INFO
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: ERROR
