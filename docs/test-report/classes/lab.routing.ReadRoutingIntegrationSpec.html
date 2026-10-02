@@ -23,7 +23,7 @@
 <tr>
 <td>
 <div class="infoBox" id="tests">
-<div class="counter">7</div>
+<div class="counter">8</div>
 <p>tests</p>
 </div>
 </td>
@@ -41,7 +41,7 @@
 </td>
 <td>
 <div class="infoBox" id="duration">
-<div class="counter">9.846s</div>
+<div class="counter">9.749s</div>
 <p>duration</p>
 </div>
 </td>
@@ -78,38 +78,43 @@
 </tr>
 </thead>
 <tr>
-<td class="success">감싼 구성에서도 쓰기 트랜잭션은 소스에 적재한다</td>
-<td class="success">0.052s</td>
-<td class="success">passed</td>
-</tr>
-<tr>
-<td class="success">고치기 전 구성은 읽기 전용 트랜잭션이어도 소스에서 조회한다</td>
-<td class="success">0.442s</td>
+<td class="success">라우팅 데이터소스를 지연 커넥션 프록시로 감싸지 않으면 읽기 전용 트랜잭션도 소스에서 조회한다</td>
+<td class="success">0.026s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">레플리카에 직접 쓰면 읽기 전용이라 거절한다</td>
-<td class="success">0.029s</td>
+<td class="success">0.025s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
 <td class="success">부하 중 앱이 받은 서버 번호와 서버가 집계한 문장 수가 일치한다</td>
-<td class="success">3.089s</td>
+<td class="success">3.076s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
-<td class="success">부하를 걸면 감싼 구성의 집계 조회는 모두 레플리카에 간다</td>
-<td class="success">3.089s</td>
+<td class="success">부하를 걸면 읽기 분리 구성의 집계 조회는 모두 레플리카에 간다</td>
+<td class="success">3.084s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
-<td class="success">부하를 걸어도 고치기 전 구성의 집계 조회는 레플리카에 하나도 가지 않는다</td>
-<td class="success">3.095s</td>
+<td class="success">읽기 분리 구성에서 읽기 전용 트랜잭션은 레플리카에서 조회한다</td>
+<td class="success">0.037s</td>
 <td class="success">passed</td>
 </tr>
 <tr>
-<td class="success">커넥션을 첫 쿼리 때 얻도록 감싸면 읽기 전용 트랜잭션은 레플리카에서 조회한다</td>
-<td class="success">0.050s</td>
+<td class="success">읽기 분리 구성에서도 쓰기 트랜잭션은 소스에 적재한다</td>
+<td class="success">0.041s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">읽기 분리가 없으면 부하 중 집계 조회는 모두 소스에 간다</td>
+<td class="success">3.080s</td>
+<td class="success">passed</td>
+</tr>
+<tr>
+<td class="success">읽기 분리가 없으면 읽기 전용 트랜잭션도 소스에서 조회한다</td>
+<td class="success">0.380s</td>
 <td class="success">passed</td>
 </tr>
 </table>
@@ -127,45 +132,61 @@
 
  :: Spring Boot ::                (v3.5.9)
 
-2026-10-01T22:17:22.985+09:00  INFO 73606 --- [    Test worker] lab.routing.ReadRoutingIntegrationSpec   : Starting ReadRoutingIntegrationSpec using Java 17.0.15 with PID 73606 (started by user in /Users/user/git-project/idean3885/read-replica-routing-lab)
-2026-10-01T22:17:22.986+09:00  INFO 73606 --- [    Test worker] lab.routing.ReadRoutingIntegrationSpec   : No active profile set, falling back to 1 default profile: &quot;default&quot;
-2026-10-01T22:17:23.390+09:00  INFO 73606 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: broken]
-2026-10-01T22:17:23.424+09:00  INFO 73606 --- [    Test worker] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.39.Final
-2026-10-01T22:17:23.447+09:00  INFO 73606 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2026-10-01T22:17:23.626+09:00  INFO 73606 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-10-01T22:17:23.646+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_broken-source - Starting...
-2026-10-01T22:17:23.670+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : sample_broken-source - Added connection com.mysql.cj.jdbc.ConnectionImpl@14bd523b
-2026-10-01T22:17:23.671+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_broken-source - Start completed.
-2026-10-01T22:17:23.726+09:00  INFO 73606 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
-	Database JDBC URL [Connecting through datasource 'lab.routing.datasource.ReplicaRoutingDataSource@13390a96']
+2026-10-02T17:56:11.265+09:00  INFO 25193 --- [    Test worker] lab.routing.ReadRoutingIntegrationSpec   : Starting ReadRoutingIntegrationSpec using Java 17.0.15 with PID 25193 (started by user in ~/git-project/idean3885/read-replica-routing-lab)
+2026-10-02T17:56:11.265+09:00  INFO 25193 --- [    Test worker] lab.routing.ReadRoutingIntegrationSpec   : No active profile set, falling back to 1 default profile: &quot;default&quot;
+2026-10-02T17:56:11.595+09:00  INFO 25193 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: withoutLazy]
+2026-10-02T17:56:11.622+09:00  INFO 25193 --- [    Test worker] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.39.Final
+2026-10-02T17:56:11.642+09:00  INFO 25193 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-02T17:56:11.777+09:00  INFO 25193 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-02T17:56:11.794+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_split-source - Starting...
+2026-10-02T17:56:11.810+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : sample_split-source - Added connection com.mysql.cj.jdbc.ConnectionImpl@74babce8
+2026-10-02T17:56:11.811+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_split-source - Start completed.
+2026-10-02T17:56:11.840+09:00  INFO 25193 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'lab.routing.datasource.ReplicaRoutingDataSource@35524549']
 	Database driver: undefined/unknown
 	Database version: 8.0.44
 	Autocommit mode: undefined/unknown
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2026-10-01T22:17:24.140+09:00  INFO 73606 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2026-10-01T22:17:24.142+09:00  INFO 73606 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'broken'
-2026-10-01T22:17:24.147+09:00  INFO 73606 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: fixed]
-2026-10-01T22:17:24.148+09:00  INFO 73606 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2026-10-01T22:17:24.159+09:00  INFO 73606 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-10-01T22:17:24.160+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_fixed-source - Starting...
-2026-10-01T22:17:24.169+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : sample_fixed-source - Added connection com.mysql.cj.jdbc.ConnectionImpl@3b32f0b4
-2026-10-01T22:17:24.169+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_fixed-source - Start completed.
-2026-10-01T22:17:24.174+09:00  INFO 73606 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
-	Database JDBC URL [Connecting through datasource 'org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy@4bc75792']
+2026-10-02T17:56:12.155+09:00  INFO 25193 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-02T17:56:12.156+09:00  INFO 25193 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'withoutLazy'
+2026-10-02T17:56:12.159+09:00  INFO 25193 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: single]
+2026-10-02T17:56:12.160+09:00  INFO 25193 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-02T17:56:12.169+09:00  INFO 25193 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-02T17:56:12.169+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : single-source - Starting...
+2026-10-02T17:56:12.174+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : single-source - Added connection com.mysql.cj.jdbc.ConnectionImpl@5a9004e1
+2026-10-02T17:56:12.175+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : single-source - Start completed.
+2026-10-02T17:56:12.176+09:00  INFO 25193 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (single-source)']
 	Database driver: undefined/unknown
 	Database version: 8.0.44
 	Autocommit mode: undefined/unknown
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2026-10-01T22:17:24.189+09:00  INFO 73606 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2026-10-01T22:17:24.189+09:00  INFO 73606 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'fixed'
-2026-10-01T22:17:24.330+09:00  INFO 73606 --- [    Test worker] lab.routing.ReadRoutingIntegrationSpec   : Started ReadRoutingIntegrationSpec in 1.536 seconds (process running for 79.01)
-2026-10-01T22:17:24.792+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_fixed-replica - Starting...
-2026-10-01T22:17:24.803+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : sample_fixed-replica - Added connection com.mysql.cj.jdbc.ConnectionImpl@5b7600ec
-2026-10-01T22:17:24.803+09:00  INFO 73606 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_fixed-replica - Start completed.
+2026-10-02T17:56:12.187+09:00  INFO 25193 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-02T17:56:12.187+09:00  INFO 25193 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'single'
+2026-10-02T17:56:12.189+09:00  INFO 25193 --- [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: split]
+2026-10-02T17:56:12.190+09:00  INFO 25193 --- [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-02T17:56:12.199+09:00  INFO 25193 --- [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-02T17:56:12.199+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_split-source - Starting...
+2026-10-02T17:56:12.204+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : sample_split-source - Added connection com.mysql.cj.jdbc.ConnectionImpl@680408ac
+2026-10-02T17:56:12.204+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_split-source - Start completed.
+2026-10-02T17:56:12.207+09:00  INFO 25193 --- [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy@4b59a1c1']
+	Database driver: undefined/unknown
+	Database version: 8.0.44
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-02T17:56:12.217+09:00  INFO 25193 --- [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-02T17:56:12.217+09:00  INFO 25193 --- [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'split'
+2026-10-02T17:56:12.328+09:00  INFO 25193 --- [    Test worker] lab.routing.ReadRoutingIntegrationSpec   : Started ReadRoutingIntegrationSpec in 1.228 seconds (process running for 78.011)
+2026-10-02T17:56:12.724+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_split-replica - Starting...
+2026-10-02T17:56:12.734+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : sample_split-replica - Added connection com.mysql.cj.jdbc.ConnectionImpl@766534b0
+2026-10-02T17:56:12.734+09:00  INFO 25193 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : sample_split-replica - Start completed.
 </pre>
 </span>
 </div>
@@ -177,7 +198,7 @@
 <input id="line-wrapping-toggle" type="checkbox" autocomplete="off"/>
 </label>
 </div>Generated by 
-<a href="https://www.gradle.org">Gradle 8.13</a> at 2026. 10. 1. 오후 10:17:35</p>
+<a href="https://www.gradle.org">Gradle 8.13</a> at 2026. 10. 2. 오후 5:56:45</p>
 </div>
 </div>
 </body>

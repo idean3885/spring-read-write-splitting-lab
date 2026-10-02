@@ -8,10 +8,11 @@ import lab.routing.datasource.LabDbProperties
 import lab.routing.load.LoadParams
 import lab.routing.load.LoadRunner
 import lab.routing.load.ServerProbe
-import lab.routing.usage.BrokenUsageOps
-import lab.routing.usage.FixedUsageOps
+import lab.routing.usage.SingleUsageOps
+import lab.routing.usage.SplitUsageOps
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.MySQLContainer
@@ -19,11 +20,12 @@ import org.testcontainers.utility.MountableFile
 import spock.lang.Specification
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@Import(WithoutLazyProxyStack)
 class ReadRoutingIntegrationSpec extends Specification {
 
   static final int SOURCE_ID = 1
   static final int REPLICA_ID = 2
-  static final LoadParams SHORT_LOAD = new LoadParams(BOTH, 4, 3, 0.8, 10)
+  static final LoadParams SHORT_LOAD = new LoadParams(BOTH, 4, 3, 0.8, 1000)
 
   static final MySQLContainer SOURCE = mysql("--server-id=$SOURCE_ID")
   static final MySQLContainer REPLICA = mysql("--server-id=$REPLICA_ID", "--read-only=ON")
@@ -45,8 +47,9 @@ class ReadRoutingIntegrationSpec extends Specification {
     registry.add("lab.db.replica.port", { REPLICA.getMappedPort(3306) })
   }
 
-  @Autowired BrokenUsageOps broken
-  @Autowired FixedUsageOps fixed
+  @Autowired SingleUsageOps single
+  @Autowired SplitUsageOps split
+  @Autowired WithoutLazyProxyStack.WithoutLazyUsageOps withoutLazy
   @Autowired ServerProbe probe
   @Autowired LabDbProperties db
   @Autowired LoadRunner runner
@@ -55,68 +58,84 @@ class ReadRoutingIntegrationSpec extends Specification {
     [SOURCE, REPLICA]*.stop()
   }
 
-  def "고치기 전 구성은 읽기 전용 트랜잭션이어도 소스에서 조회한다"() {
+  def "읽기 분리가 없으면 읽기 전용 트랜잭션도 소스에서 조회한다"() {
     given:
-    def before = snapshot("sample_broken")
+    def before = snapshot("sample_single")
 
     when:
-    def answered = broken.aggregateRecent(10)
+    def answered = single.aggregateRecent(1000)
 
     then: "앱이 받은 서버 번호가 소스다"
     answered.serverId() == SOURCE_ID
 
-    and: "서버가 받은 문장도 소스에만 있다. 이 명세는 결함을 고정한다"
-    def arrived = delta("sample_broken", before)
+    and: "서버가 받은 문장도 소스에만 있다"
+    def arrived = delta("sample_single", before)
     arrived.source.selects() == 1
     arrived.replica.selects() == 0
   }
 
-  def "커넥션을 첫 쿼리 때 얻도록 감싸면 읽기 전용 트랜잭션은 레플리카에서 조회한다"() {
+  def "읽기 분리 구성에서 읽기 전용 트랜잭션은 레플리카에서 조회한다"() {
     given:
-    def before = snapshot("sample_fixed")
+    def before = snapshot("sample_split")
 
     when:
-    def answered = fixed.aggregateRecent(10)
+    def answered = split.aggregateRecent(1000)
 
     then:
     answered.serverId() == REPLICA_ID
 
     and:
-    def arrived = delta("sample_fixed", before)
+    def arrived = delta("sample_split", before)
     arrived.replica.selects() == 1
     arrived.source.selects() == 0
   }
 
-  def "감싼 구성에서도 쓰기 트랜잭션은 소스에 적재한다"() {
+  def "읽기 분리 구성에서도 쓰기 트랜잭션은 소스에 적재한다"() {
     given:
-    def before = snapshot("sample_fixed")
+    def before = snapshot("sample_split")
 
     when:
-    def answeredServerId = fixed.collect()
+    def written = split.collect()
 
     then:
-    answeredServerId == SOURCE_ID
+    written.serverId() == SOURCE_ID
 
     and:
-    def arrived = delta("sample_fixed", before)
+    def arrived = delta("sample_split", before)
     arrived.source.inserts() == 1
     arrived.replica.inserts() == 0
   }
 
+  def "라우팅 데이터소스를 지연 커넥션 프록시로 감싸지 않으면 읽기 전용 트랜잭션도 소스에서 조회한다"() {
+    given:
+    def before = snapshot("sample_split")
+
+    when:
+    def answered = withoutLazy.aggregateRecent(1000)
+
+    then: "JpaTransactionManager 가 readOnly 표시를 켜기 전에 커넥션을 얻어, 키를 고르는 순간 표시가 꺼져 있다"
+    answered.serverId() == SOURCE_ID
+
+    and: "오류 없이 소스가 대신 응답한다. 결과값만 보는 테스트로는 이 차이가 드러나지 않는다"
+    def arrived = delta("sample_split", before)
+    arrived.source.selects() == 1
+    arrived.replica.selects() == 0
+  }
+
   def "레플리카에 직접 쓰면 읽기 전용이라 거절한다"() {
     when:
-    DriverManager.getConnection(db.replica().jdbcUrl("sample_fixed"), db.username(), db.password()).withCloseable { c ->
+    DriverManager.getConnection(db.replica().jdbcUrl("sample_split"), db.username(), db.password()).withCloseable { c ->
       c.createStatement().executeUpdate("INSERT INTO usage_sample (collected_at, value_mb) VALUES (NOW(3), 1)")
     }
 
-    then: "쓰기를 잘못 보내면 바로 실패한다. 읽기를 잘못 보내면 아무 오류 없이 성공하므로 도착 서버를 직접 봐야 한다"
+    then: "쓰기가 레플리카로 잘못 가면 바로 실패한다. 읽기는 어느 쪽으로 가도 성공하므로 도착 서버를 직접 본다"
     def e = thrown(SQLException)
     e.message.contains("read-only")
   }
 
-  def "부하를 걸어도 고치기 전 구성의 집계 조회는 레플리카에 하나도 가지 않는다"() {
+  def "읽기 분리가 없으면 부하 중 집계 조회는 모두 소스에 간다"() {
     when:
-    def result = runner.runStack("broken", broken, "sample_broken", SHORT_LOAD)
+    def result = runner.runStack("single", single, "sample_single", SHORT_LOAD, 0)
 
     then:
     result.errors() == 0
@@ -124,9 +143,9 @@ class ReadRoutingIntegrationSpec extends Specification {
     result.replica().selects() == 0
   }
 
-  def "부하를 걸면 감싼 구성의 집계 조회는 모두 레플리카에 간다"() {
+  def "부하를 걸면 읽기 분리 구성의 집계 조회는 모두 레플리카에 간다"() {
     when:
-    def result = runner.runStack("fixed", fixed, "sample_fixed", SHORT_LOAD)
+    def result = runner.runStack("split", split, "sample_split", SHORT_LOAD, 0)
 
     then:
     result.errors() == 0
@@ -136,7 +155,7 @@ class ReadRoutingIntegrationSpec extends Specification {
 
   def "부하 중 앱이 받은 서버 번호와 서버가 집계한 문장 수가 일치한다"() {
     when:
-    def result = runner.runStack("fixed", fixed, "sample_fixed", SHORT_LOAD)
+    def result = runner.runStack("split", split, "sample_split", SHORT_LOAD, 0)
 
     then: "두 관찰이 서로를 확인한다. 하나만 보면 그 관찰 수단이 틀렸을 때 걸러지지 않는다"
     result.appReadsOnReplica() == result.replica().selects()
