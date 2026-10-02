@@ -51,7 +51,7 @@ wait_until "레플리카 초기 데이터 복제" 240 replica_seeded
 
 echo "[2/5] 앱 기동"
 ./gradlew -q bootJar
-JAR=$(ls build/libs/*.jar | grep -v plain | head -1)
+JAR=$(ls -t build/libs/*.jar | grep -v plain | head -1)
 java -jar "$JAR" --server.port="$PORT" >"$WORK/app.log" 2>&1 &
 APP_PID=$!
 wait_until "앱 기동" 120 curl -sf "$API/api/check" || { tail -30 "$WORK/app.log" >&2; exit 1; }
