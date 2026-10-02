@@ -120,11 +120,11 @@ final class ReportHtml {
       if (b.replicaShareOfReads() == 0 && f.replicaShareOfReads() == 1 && f.replica().inserts() == 0 && b.errors() + f.errors() == 0) {
         return """
             <p><b>읽기 분리를 켜면 조회는 레플리카가 받고, 소스는 쓰기만 받습니다.</b></p>
-            <ul><li>근거: 집계 조회의 레플리카 도착 비율 single %.0f%% · split %.0f%% (서버 쪽 문장 수). 앱이 본 서버 번호는 split 레플리카 %,d건 · 서버 쪽 %,d건</li>
+            <ul><li>근거: 집계 조회의 레플리카 도착 비율 single %.0f%% · split %.0f%% (서버 쪽 문장 수), 앱이 본 서버 번호 split 레플리카 %,d건 · 서버 쪽 %,d건</li>
             <li>적재 지연 p50 · p99: %s · %s → %s · %s ms</li>
             <li>처리량: %s → %s ops/s</li>%s
-            <li>구성의 요점: 라우팅 데이터소스를 지연 커넥션 프록시로 감싸서 JPA 에 넘깁니다.<br>감싸지 않으면 조회가 소스로 갑니다(명세로 확인).</li>
-            <li>대가: 복제 지연입니다.<br>방금 쓴 값을 바로 읽는 조회는 readOnly 를 빼서 소스로 보냅니다(명세로 확인).</li></ul>
+            <li>구성의 요점: JPA 에는 라우팅 데이터소스를 지연 커넥션 프록시로 감싸서 전달(빠지면 조회가 소스로 향함, 명세로 확인)</li>
+            <li>대가: 복제 지연, 방금 쓴 값을 바로 읽는 조회는 readOnly 없이 소스에서 조회(명세로 확인)</li></ul>
             """.formatted(b.replicaShareOfReads() * 100, f.replicaShareOfReads() * 100, f.appReadsOnReplica(), f.replica().selects(),
             fmt(b.writeLatency().p50()), fmt(b.writeLatency().p99()), fmt(f.writeLatency().p50()), fmt(f.writeLatency().p99()),
             fmt(b.opsPerSec()), fmt(f.opsPerSec()), cpuLine(run));
