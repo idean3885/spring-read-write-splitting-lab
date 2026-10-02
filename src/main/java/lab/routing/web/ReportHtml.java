@@ -230,6 +230,7 @@ final class ReportHtml {
     int dur = run.params().durationSec();
     List<Double> timeTicks = new ArrayList<>();
     for (int t = 0; t <= dur; t += Math.max(5, dur / 6)) timeTicks.add((double) t);
+    if (timeTicks.get(timeTicks.size() - 1) < dur) timeTicks.add((double) dur);
     double[] tt = timeTicks.stream().mapToDouble(Double::doubleValue).toArray();
     String[] tl = timeTicks.stream().map(t -> "%.0f초".formatted(t)).toArray(String[]::new);
     return "<h3>쓰기 지연 백분위 분포 <span class=\"muted\">(HdrHistogram 형식)</span></h3>"

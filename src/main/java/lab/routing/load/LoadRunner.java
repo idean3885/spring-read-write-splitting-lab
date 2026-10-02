@@ -106,7 +106,10 @@ public class LoadRunner {
       pool.submit(() -> new Worker(warmupSec).loop(ops, params, start, deadline, new AtomicLong()));
     }
     pool.shutdown();
-    pool.awaitTermination(warmupSec + 60L, TimeUnit.SECONDS);
+    if (!pool.awaitTermination(warmupSec + 60L, TimeUnit.SECONDS)) {
+      pool.shutdownNow();
+      throw new IllegalStateException("준비 부하가 제시간에 끝나지 않아 측정을 시작하지 않습니다.");
+    }
   }
 
   public Progress progress() { return progress.get(); }

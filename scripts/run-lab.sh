@@ -60,8 +60,12 @@ echo "[3/5] 부하 실행: 작업자 $CONCURRENCY · 구성당 ${DURATION}초 ·
 BODY=$(printf '{"mode":"BOTH","concurrency":%s,"durationSec":%s,"readRatio":%s,"scanRows":%s}' "$CONCURRENCY" "$DURATION" "$READ_RATIO" "$SCAN_ROWS")
 curl -sf -X POST "$API/api/runs" -H 'Content-Type: application/json' -d "$BODY" >/dev/null
 : >"$WORK/cpu.tsv"
+poll_progress() {  # 일시적인 실패는 다시 묻는다
+  for _ in 1 2 3; do curl -sf "$API/api/progress" && return 0; sleep 1; done
+  return 1
+}
 while :; do
-  PROGRESS=$(curl -sf "$API/api/progress")
+  PROGRESS=$(poll_progress) || { echo "[실패] 진행 상황 조회: 3회 연속 응답 없음" >&2; exit 1; }
   echo "$PROGRESS" | grep -q '"running":true' || break
   STAGE=$(echo "$PROGRESS" | sed -n 's/.*"stage":"\([^"]*\)".*/\1/p')
   if [ "$STAGE" = "single" ] || [ "$STAGE" = "split" ]; then
