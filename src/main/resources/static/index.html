@@ -89,7 +89,7 @@
   async function poll(stacks) {
     const p = await (await fetch('/api/progress')).json();
     if (p.running) {
-      const done = p.stage === 'split' && stacks === 2 ? 1 : 0;
+      const done = p.stage.startsWith('split') && stacks === 2 ? 1 : 0;
       const pct = ((done + (p.totalSec ? p.elapsedSec / p.totalSec : 0)) / stacks) * 100;
       $('bar').style.width = Math.min(100, pct) + '%';
       $('status').textContent = `${p.stage} 실행 중 · ${p.elapsedSec}/${p.totalSec}초 · ${p.ops.toLocaleString()} ops`;

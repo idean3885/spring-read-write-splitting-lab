@@ -135,7 +135,7 @@ class ReadRoutingIntegrationSpec extends Specification {
 
   def "읽기 분리가 없으면 부하 중 집계 조회는 모두 소스에 간다"() {
     when:
-    def result = runner.runStack("single", single, "sample_single", SHORT_LOAD)
+    def result = runner.runStack("single", single, "sample_single", SHORT_LOAD, 0)
 
     then:
     result.errors() == 0
@@ -145,7 +145,7 @@ class ReadRoutingIntegrationSpec extends Specification {
 
   def "부하를 걸면 읽기 분리 구성의 집계 조회는 모두 레플리카에 간다"() {
     when:
-    def result = runner.runStack("split", split, "sample_split", SHORT_LOAD)
+    def result = runner.runStack("split", split, "sample_split", SHORT_LOAD, 0)
 
     then:
     result.errors() == 0
@@ -155,7 +155,7 @@ class ReadRoutingIntegrationSpec extends Specification {
 
   def "부하 중 앱이 받은 서버 번호와 서버가 집계한 문장 수가 일치한다"() {
     when:
-    def result = runner.runStack("split", split, "sample_split", SHORT_LOAD)
+    def result = runner.runStack("split", split, "sample_split", SHORT_LOAD, 0)
 
     then: "두 관찰이 서로를 확인한다. 하나만 보면 그 관찰 수단이 틀렸을 때 걸러지지 않는다"
     result.appReadsOnReplica() == result.replica().selects()

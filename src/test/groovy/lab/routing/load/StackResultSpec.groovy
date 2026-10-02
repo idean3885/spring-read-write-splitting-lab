@@ -6,11 +6,11 @@ import spock.lang.Specification
 
 class StackResultSpec extends Specification {
 
-  static final Latency NONE = new Latency(0, 0, 0, 0)
+  static final Latency NONE = Latency.NONE
 
   static StackResult arrived(long sourceSelects, long replicaSelects, long replicaInserts) {
     new StackResult("sut", 1000, 10, 2, 0, null, 12, NONE, NONE, 0, 0,
-        new Counts(sourceSelects, 2), new Counts(replicaSelects, replicaInserts), 0)
+        new Counts(sourceSelects, 2), new Counts(replicaSelects, replicaInserts), 0, [])
   }
 
   def "집계 조회가 소스에 #sourceSelects 건, 레플리카에 #replicaSelects 건 도착하면 레플리카 비율을 #share 로 본다"() {

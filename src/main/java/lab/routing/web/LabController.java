@@ -41,6 +41,11 @@ public class LabController {
         : ResponseEntity.status(409).body(Map.of("error", "이미 실행 중"));
   }
 
+  @PostMapping("/api/runs/{id}/cpu")
+  public ResponseEntity<?> cpu(@PathVariable int id, @RequestBody Map<String, LoadRunner.Cpu> cpu) {
+    return runner.attachCpu(id, cpu) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+  }
+
   @GetMapping("/api/progress")
   public LoadRunner.Progress progress() { return runner.progress(); }
 
