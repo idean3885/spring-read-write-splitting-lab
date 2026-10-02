@@ -24,14 +24,14 @@ class StackResultSpec extends Specification {
     3             | 7              || 0.7
   }
 
-  def "집계 조회가 하나도 레플리카에 가지 않으면 읽기 분리가 동작하지 않는다고 판정한다"() {
+  def "집계 조회가 하나도 레플리카에 가지 않으면 소스 하나가 모두 받았다고 적는다"() {
     expect:
-    arrived(10, 0, 0).verdict().contains("동작하지 않는다")
+    arrived(10, 0, 0).verdict().contains("소스 하나가")
   }
 
-  def "집계 조회가 모두 레플리카에 가고 레플리카에 쓰기가 없으면 읽기 분리가 동작한다고 판정한다"() {
+  def "집계 조회가 모두 레플리카에 가고 레플리카에 쓰기가 없으면 조회와 쓰기가 나뉘었다고 적는다"() {
     expect:
-    arrived(0, 10, 0).verdict().contains("동작한다")
+    arrived(0, 10, 0).verdict().contains("조회는 레플리카, 쓰기는 소스")
   }
 
   def "일부만 레플리카에 가면 레플리카 비율을 판정에 적는다"() {

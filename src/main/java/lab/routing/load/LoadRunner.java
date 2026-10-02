@@ -9,25 +9,25 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import lab.routing.datasource.LabDbProperties;
 import lab.routing.load.LoadParams.Mode;
-import lab.routing.usage.BrokenUsageOps;
-import lab.routing.usage.FixedUsageOps;
+import lab.routing.usage.SingleUsageOps;
+import lab.routing.usage.SplitUsageOps;
 import lab.routing.usage.UsageOps;
 import org.springframework.stereotype.Component;
 
 @Component
 public class LoadRunner {
 
-  private final BrokenUsageOps broken;
-  private final FixedUsageOps fixed;
+  private final SingleUsageOps single;
+  private final SplitUsageOps split;
   private final ServerProbe probe;
   private final LabDbProperties db;
   private final ExecutorService runnerThread = Executors.newSingleThreadExecutor();
   private final AtomicReference<Progress> progress = new AtomicReference<>(Progress.idle());
   private final List<Run> runs = new CopyOnWriteArrayList<>();
 
-  public LoadRunner(BrokenUsageOps broken, FixedUsageOps fixed, ServerProbe probe, LabDbProperties db) {
-    this.broken = broken;
-    this.fixed = fixed;
+  public LoadRunner(SingleUsageOps single, SplitUsageOps split, ServerProbe probe, LabDbProperties db) {
+    this.single = single;
+    this.split = split;
     this.probe = probe;
     this.db = db;
   }
@@ -38,8 +38,8 @@ public class LoadRunner {
     runnerThread.submit(() -> {
       try {
         var results = new ArrayList<StackResult>();
-        if (params.mode() != Mode.FIXED) results.add(runStack("broken", broken, "sample_broken", params));
-        if (params.mode() != Mode.BROKEN) results.add(runStack("fixed", fixed, "sample_fixed", params));
+        if (params.mode() != Mode.SPLIT) results.add(runStack("single", single, "sample_single", params));
+        if (params.mode() != Mode.SINGLE) results.add(runStack("split", split, "sample_split", params));
         runs.add(0, new Run(runs.size() + 1, LocalDateTime.now(), params, db.poolSize(), results));
         progress.set(Progress.idle());
       } catch (Exception e) {
@@ -62,7 +62,8 @@ public class LoadRunner {
     for (int i = 0; i < params.concurrency(); i++) {
       workers.add(pool.submit(() -> new Worker().loop(ops, params, deadline, ops$)));
     }
-    while (System.nanoTime() < deadline) {      maxLag.accumulateAndGet(probe.replicaLagSeconds(), Math::max);
+    while (System.nanoTime() < deadline) {
+      maxLag.accumulateAndGet(probe.replicaLagSeconds(), Math::max);
       long elapsed = (System.nanoTime() - start) / 1_000_000_000L;
       progress.set(new Progress(true, name, elapsed, params.durationSec(), ops$.get(), null));
       Thread.sleep(500);
@@ -107,7 +108,7 @@ public class LoadRunner {
         long t0 = System.nanoTime();
         try {
           if (rnd.nextDouble() < p.readRatio()) {
-            var r = ops.aggregateRecent(p.windowMinutes());
+            var r = ops.aggregateRecent(p.scanRows());
             if (r.serverId() == UsageOps.SOURCE_ID) onSource++; else onReplica++;
             readNanos = put(readNanos, readN++, System.nanoTime() - t0);
             reads++;

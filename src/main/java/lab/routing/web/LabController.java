@@ -5,8 +5,8 @@ import java.util.Map;
 import lab.routing.load.LoadParams;
 import lab.routing.load.LoadRunner;
 import lab.routing.load.ServerProbe;
-import lab.routing.usage.BrokenUsageOps;
-import lab.routing.usage.FixedUsageOps;
+import lab.routing.usage.SingleUsageOps;
+import lab.routing.usage.SplitUsageOps;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,14 +15,14 @@ import org.springframework.web.bind.annotation.*;
 public class LabController {
 
   private final LoadRunner runner;
-  private final BrokenUsageOps broken;
-  private final FixedUsageOps fixed;
+  private final SingleUsageOps single;
+  private final SplitUsageOps split;
   private final ServerProbe probe;
 
-  public LabController(LoadRunner runner, BrokenUsageOps broken, FixedUsageOps fixed, ServerProbe probe) {
+  public LabController(LoadRunner runner, SingleUsageOps single, SplitUsageOps split, ServerProbe probe) {
     this.runner = runner;
-    this.broken = broken;
-    this.fixed = fixed;
+    this.single = single;
+    this.split = split;
     this.probe = probe;
   }
 
@@ -31,7 +31,7 @@ public class LabController {
 
   @GetMapping("/api/check")
   public Map<String, Object> check() {
-    return Map.of("brokenReadOnlyServerId", broken.whereAmI(), "fixedReadOnlyServerId", fixed.whereAmI(),
+    return Map.of("singleReadOnlyServerId", single.whereAmI(), "splitReadOnlyServerId", split.whereAmI(),
         "replicaLagSec", probe.replicaLagSeconds());
   }
 

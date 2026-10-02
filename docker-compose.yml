@@ -1,8 +1,10 @@
 # 소스 1대 + 레플리카 1대. GTID 기반 비동기 복제, 레플리카는 read_only
+# 두 서버가 같은 CPU 를 나눠 쓰면 조회를 넘겨도 부하가 그대로 남는다. 서버마다 CPU 하나씩 고정해 별도 장비처럼 둔다
 services:
   source:
     image: mysql:8.0
     container_name: lab-mysql-source
+    cpuset: "0"
     environment: { MYSQL_ROOT_PASSWORD: root, MYSQL_INITDB_SKIP_TZINFO: "1" }
     command: --server-id=1 --log-bin=mysql-bin --binlog-format=ROW --gtid-mode=ON --enforce-gtid-consistency=ON
     ports: ["3307:3306"]
@@ -13,6 +15,7 @@ services:
   replica:
     image: mysql:8.0
     container_name: lab-mysql-replica
+    cpuset: "1"
     environment: { MYSQL_ROOT_PASSWORD: root, MYSQL_INITDB_SKIP_TZINFO: "1" }
     command: --server-id=2 --relay-log=relay-bin --gtid-mode=ON --enforce-gtid-consistency=ON --read-only=ON
     ports: ["3308:3306"]

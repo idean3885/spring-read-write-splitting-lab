@@ -31,7 +31,7 @@
 <body>
 <main>
   <h1>읽기 분리 부하 발생기</h1>
-  <p class="muted">readOnly 트랜잭션이 실제로 레플리카에 도착하는지, 두 구성(broken · fixed)에 같은 부하를 걸어 서버 쪽 문장 수로 확인한다.</p>
+  <p class="muted">읽기 분리가 없는 구성(single)과 있는 구성(split)에 같은 부하를 걸고, 각 DB 가 받은 쿼리 수와 지연을 비교한다.</p>
 
   <section class="panel">
     <div class="env" id="env">환경 확인 중…</div>
@@ -39,11 +39,11 @@
 
   <section class="panel">
     <div class="grid">
-      <label>구성<select id="mode"><option value="BOTH">둘 다 (비교)</option><option value="BROKEN">broken 만</option><option value="FIXED">fixed 만</option></select></label>
+      <label>구성<select id="mode"><option value="BOTH">둘 다 (비교)</option><option value="SINGLE">single 만</option><option value="SPLIT">split 만</option></select></label>
       <label>동시 작업자<input id="concurrency" type="number" min="1" max="256"></label>
       <label>실행 시간 (초, 구성당)<input id="durationSec" type="number" min="3" max="300"></label>
       <label>읽기 비율 (0~1)<input id="readRatio" type="number" min="0" max="1" step="0.05"></label>
-      <label>집계 구간 (분)<input id="windowMinutes" type="number" min="1" max="1440"></label>
+      <label>집계 건수 (최근 N건)<input id="scanRows" type="number" min="1" max="200000" step="1000"></label>
     </div>
     <div class="actions">
       <button id="start">부하 시작</button>
@@ -59,7 +59,7 @@
   </section>
 </main>
 <script>
-  const fields = ['mode', 'concurrency', 'durationSec', 'readRatio', 'windowMinutes'];
+  const fields = ['mode', 'concurrency', 'durationSec', 'readRatio', 'scanRows'];
   const $ = id => document.getElementById(id);
   let defaults;
 
@@ -68,8 +68,8 @@
     fill(defaults);
     try {
       const c = await (await fetch('/api/check')).json();
-      const pill = (name, id) => `<span class="pill ${id === 2 ? 'ok' : 'bad'}">${name} readOnly → ${id === 1 ? '소스' : '레플리카'} (server_id ${id})</span>`;
-      $('env').innerHTML = pill('broken', c.brokenReadOnlyServerId) + pill('fixed', c.fixedReadOnlyServerId)
+      const pill = (name, id, expected) => `<span class="pill ${id === expected ? 'ok' : 'bad'}">${name} readOnly → ${id === 1 ? '소스' : '레플리카'} (server_id ${id})</span>`;
+      $('env').innerHTML = pill('single', c.singleReadOnlyServerId, 1) + pill('split', c.splitReadOnlyServerId, 2)
         + `<span class="pill">복제 지연 ${c.replicaLagSec < 0 ? '복제 없음' : c.replicaLagSec + '초'}</span>`;
     } catch (e) { $('env').textContent = 'DB 에 연결하지 못했다. docker compose up -d 를 먼저 실행한다'; }
     const runs = await (await fetch('/api/runs')).json();
@@ -89,7 +89,7 @@
   async function poll(stacks) {
     const p = await (await fetch('/api/progress')).json();
     if (p.running) {
-      const done = p.stage === 'fixed' && stacks === 2 ? 1 : 0;
+      const done = p.stage === 'split' && stacks === 2 ? 1 : 0;
       const pct = ((done + (p.totalSec ? p.elapsedSec / p.totalSec : 0)) / stacks) * 100;
       $('bar').style.width = Math.min(100, pct) + '%';
       $('status').textContent = `${p.stage} 실행 중 · ${p.elapsedSec}/${p.totalSec}초 · ${p.ops.toLocaleString()} ops`;
