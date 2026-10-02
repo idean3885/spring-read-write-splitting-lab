@@ -1,4 +1,4 @@
-# read-replica-routing-lab
+# spring-read-write-splitting-lab
 
 Spring · JPA 애플리케이션에서 읽기 분리(조회는 레플리카, 쓰기는 소스)를 구성하고, 구성하면 무엇이 달라지는지 재 본 랩.
 
