@@ -23,21 +23,21 @@ final class ReportHtml {
         <h1>읽기 분리 PoC 보고서 <span class="muted">#%d · %s</span></h1>
         %s
         <h2>1. 목적</h2>
-        <p><b>Spring · JPA 애플리케이션에서 읽기 분리를 어떻게 구성하는지, 구성하면 무엇이 달라지는지 확인한다.</b><br>
-        같은 부하를 읽기 분리가 없는 구성(single)과 있는 구성(split)에 걸고, 각 DB 가 실제로 받은 쿼리 수와 지연을 비교한다.</p>
+        <p><b>Spring · JPA 애플리케이션에서 읽기 분리를 어떻게 구성하는지, 구성하면 무엇이 달라지는지 확인합니다.</b><br>
+        같은 부하를 읽기 분리가 없는 구성(single)과 있는 구성(split)에 걸고, 각 DB 가 실제로 받은 쿼리 수와 지연을 비교합니다.</p>
         <table><thead><tr><th>성공 기준 (실행 전에 정함)</th><th>single</th><th>split</th></tr></thead><tbody>
-        <tr><th>집계 조회가 레플리카에 도착한 비율</th><td>0%% (기준선: 소스가 모두 받는다)</td><td>100%% (조회는 모두 레플리카로)</td></tr>
+        <tr><th>집계 조회가 레플리카에 도착한 비율</th><td>0%% (기준선: 소스가 모두 받습니다)</td><td>100%% (조회는 모두 레플리카로)</td></tr>
         <tr><th>쓰기가 레플리카에 도착한 건수 · 오류</th><td>0 · 0</td><td>0 · 0</td></tr></tbody></table>
 
         <h2>2. 조건</h2>
         <h3>알아야 할 용어</h3>
         <table><tbody>
         <tr><th>소스</th><td>쓰기를 받는 원본 DB. 이 실험의 MySQL 1번 서버(server_id 1)</td></tr>
-        <tr><th>레플리카</th><td>소스의 변경을 복제받는 사본 DB. 읽기만 허용한다(read_only). MySQL 2번 서버(server_id 2)</td></tr>
+        <tr><th>레플리카</th><td>소스의 변경을 복제받는 사본 DB. 읽기만 허용합니다(read_only). MySQL 2번 서버(server_id 2)</td></tr>
         <tr><th>읽기 분리</th><td>조회는 레플리카, 쓰기는 소스로 보내 소스의 부하를 나누는 구성</td></tr>
-        <tr><th>readOnly 트랜잭션</th><td>Spring 의 <code>@Transactional(readOnly = true)</code>. 이 표시를 보고 레플리카로 보낸다</td></tr>
-        <tr><th>라우팅 데이터소스</th><td>Spring 의 <code>AbstractRoutingDataSource</code>. 커넥션을 달라는 요청을 받는 순간, 현재 트랜잭션이 readOnly 인지 보고 소스 · 레플리카 중 하나에서 커넥션을 꺼낸다</td></tr>
-        <tr><th>지연 커넥션 프록시</th><td>Spring 의 <code>LazyConnectionDataSourceProxy</code>. 커넥션 요청을 받으면 대리 객체를 먼저 돌려주고, 첫 쿼리를 실행할 때 진짜 커넥션을 꺼낸다</td></tr>
+        <tr><th>readOnly 트랜잭션</th><td>Spring 의 <code>@Transactional(readOnly = true)</code>. 이 표시를 보고 레플리카로 보냅니다</td></tr>
+        <tr><th>라우팅 데이터소스</th><td>Spring 의 <code>AbstractRoutingDataSource</code>. 커넥션을 달라는 요청을 받는 순간, 현재 트랜잭션이 readOnly 인지 보고 소스 · 레플리카 중 하나에서 커넥션을 꺼냅니다</td></tr>
+        <tr><th>지연 커넥션 프록시</th><td>Spring 의 <code>LazyConnectionDataSourceProxy</code>. 커넥션 요청을 받으면 대리 객체를 먼저 돌려주고, 첫 쿼리를 실행할 때 진짜 커넥션을 꺼냅니다</td></tr>
         </tbody></table>
 
         <h3>비교하는 두 구성</h3>
@@ -50,9 +50,9 @@ final class ReportHtml {
 
         <h2>3. 절차</h2>
         <table><tbody>
-        <tr><th>부하</th><td>동시 작업자 %d개가 구성당 %d초 동안 쉬지 않고 연산을 보낸다.<br>single 을 먼저, split 을 다음에 실행한다. 구성마다 측정 전 %d초 준비 부하를 걸고 버린다(JVM · 커넥션 풀 준비)</td></tr>
-        <tr><th>연산</th><td>집계 조회 %.0f%%: readOnly 트랜잭션으로 최근 %,d건 사용량의 건수 · 합계를 조회한다<br>원천 적재 %.0f%%: 쓰기 트랜잭션으로 사용량 1행을 넣는다</td></tr>
-        <tr><th>판정 지표</th><td>도착 서버: 각 MySQL 의 문장 통계(<code>performance_schema.events_statements_summary_by_digest</code>)를 실행 전후로 뺀 값<br>복제는 ROW 형식이라 레플리카가 복제로 적용한 변경은 문장으로 잡히지 않는다<br>그래서 레플리카에 잡힌 SELECT 는 앱이 보낸 것이다</td></tr>
+        <tr><th>부하</th><td>동시 작업자 %d개가 구성당 %d초 동안 쉬지 않고 연산을 보냅니다.<br>single 을 먼저, split 을 다음에 실행합니다. 구성마다 측정 전 %d초 준비 부하를 걸고 버립니다(JVM · 커넥션 풀 준비)</td></tr>
+        <tr><th>연산</th><td>집계 조회 %.0f%%: readOnly 트랜잭션으로 최근 %,d건 사용량의 건수 · 합계를 조회합니다<br>원천 적재 %.0f%%: 쓰기 트랜잭션으로 사용량 1행을 넣습니다</td></tr>
+        <tr><th>판정 지표</th><td>도착 서버: 각 MySQL 의 문장 통계(<code>performance_schema.events_statements_summary_by_digest</code>)를 실행 전후로 뺀 값<br>복제는 ROW 형식이라 레플리카가 복제로 적용한 변경은 문장으로 잡히지 않습니다<br>그래서 레플리카에 잡힌 SELECT 는 앱이 보낸 것입니다</td></tr>
         <tr><th>교차 확인</th><td>조회 트랜잭션 안에서 받은 <code>@@server_id</code> (앱이 본 서버 번호)</td></tr>
         <tr><th>부가 지표</th><td>처리량 · 지연 p50 · p95 · p99 · max · 오류 · 복제 지연(0.5초마다 확인)</td></tr>
         </tbody></table>
@@ -119,20 +119,20 @@ final class ReportHtml {
       var f = split.get();
       if (b.replicaShareOfReads() == 0 && f.replicaShareOfReads() == 1 && f.replica().inserts() == 0 && b.errors() + f.errors() == 0) {
         return """
-            <p><b>읽기 분리를 켜면 조회는 레플리카가 받고, 소스는 쓰기만 받는다.</b></p>
+            <p><b>읽기 분리를 켜면 조회는 레플리카가 받고, 소스는 쓰기만 받습니다.</b></p>
             <ul><li>근거: 집계 조회의 레플리카 도착 비율 single %.0f%% · split %.0f%% (서버 쪽 문장 수). 앱이 본 서버 번호는 split 레플리카 %,d건 · 서버 쪽 %,d건</li>
             <li>적재 지연 p50 · p99: %s · %s → %s · %s ms</li>
             <li>처리량: %s → %s ops/s</li>%s
-            <li>구성의 요점: 라우팅 데이터소스를 지연 커넥션 프록시로 감싸서 JPA 에 넘긴다. 감싸지 않으면 조회가 소스로 간다 (명세로 확인)</li>
-            <li>대가: 복제 지연. 방금 쓴 값을 바로 읽는 조회는 readOnly 를 빼서 소스로 보낸다 (명세로 확인)</li></ul>
+            <li>구성의 요점: 라우팅 데이터소스를 지연 커넥션 프록시로 감싸서 JPA 에 넘깁니다. 감싸지 않으면 조회가 소스로 갑니다 (명세로 확인)</li>
+            <li>대가: 복제 지연입니다. 방금 쓴 값을 바로 읽는 조회는 readOnly 를 빼서 소스로 보냅니다 (명세로 확인)</li></ul>
             """.formatted(b.replicaShareOfReads() * 100, f.replicaShareOfReads() * 100, f.appReadsOnReplica(), f.replica().selects(),
             fmt(b.writeLatency().p50()), fmt(b.writeLatency().p99()), fmt(f.writeLatency().p50()), fmt(f.writeLatency().p99()),
             fmt(b.opsPerSec()), fmt(f.opsPerSec()), cpuLine(run));
       }
-      return "<p><b>성공 기준을 충족하지 못했다.</b> 위 성공 기준 대조에서 미충족 항목을 본다.</p>";
+      return "<p><b>성공 기준을 충족하지 못했습니다.</b> 위 성공 기준 대조에서 미충족 항목을 확인합니다.</p>";
     }
     var only = run.results().get(0);
-    return "<p><b>%s 단독 실행.</b> %s. 두 구성을 비교하려면 「둘 다」로 실행한다.</p>".formatted(only.stack(), esc(only.verdict()));
+    return "<p><b>%s 단독 실행.</b> %s. 두 구성을 비교하려면 「둘 다」로 실행합니다.</p>".formatted(only.stack(), esc(only.verdict()));
   }
 
   private static String cpuLine(Run run) {
@@ -195,7 +195,7 @@ final class ReportHtml {
     if (bc != null && fc != null) {
       sb.append(tile("소스 CPU", "%.0f%%".formatted(bc.source()), "%.0f%%".formatted(fc.source()), ""));
     }
-    return sb.append("</section><p class=\"muted small\">각 타일은 single → split. 같은 부하를 두 구성에 차례로 걸었다</p>").toString();
+    return sb.append("</section><p class=\"muted small\">각 타일은 single → split. 같은 부하를 두 구성에 차례로 걸었습니다</p>").toString();
   }
 
   private static String tile(String label, String before, String after, String change) {
@@ -234,13 +234,13 @@ final class ReportHtml {
     String[] tl = timeTicks.stream().map(t -> "%.0f초".formatted(t)).toArray(String[]::new);
     return "<h3>쓰기 지연 백분위 분포 <span class=\"muted\">(HdrHistogram 형식)</span></h3>"
         + chart(curve, ticks, tickLabels, "ms")
-        + "<p class=\"muted small\">가로축은 백분위(오른쪽일수록 드문 느린 요청), 세로축은 지연이다. 작업자가 응답을 받고 다음 요청을 보내는 닫힌 루프라 "
-        + "서버가 느려진 동안 요청을 덜 보낸다(coordinated omission). 꼬리 절댓값은 실제보다 작게 나올 수 있고, 두 구성 비교는 같은 방식이라 유효하다</p>"
+        + "<p class=\"muted small\">가로축은 백분위(오른쪽일수록 드문 느린 요청), 세로축은 지연입니다. 작업자가 응답을 받고 다음 요청을 보내는 닫힌 루프라 "
+        + "서버가 느려진 동안 요청을 덜 보냅니다(coordinated omission). 꼬리 절댓값은 실제보다 작게 나올 수 있고, 두 구성 비교는 같은 방식이라 유효합니다</p>"
         + "<h3>초당 처리량 <span class=\"muted\">(Gatling 형식, 시간 순)</span></h3>"
         + chart(ops, tt, tl, "ops/s")
         + "<h3>초당 쓰기 지연 p99</h3>"
         + chart(writeP99, tt, tl, "ms")
-        + "<p class=\"muted small\">값이 실행 내내 고르면 평균 · 백분위를 믿을 수 있다. 앞부분만 튀면 준비 구간이다</p>";
+        + "<p class=\"muted small\">값이 실행 내내 고르면 평균 · 백분위를 믿을 수 있습니다. 앞부분만 튀면 준비 구간입니다</p>";
   }
 
   private static double nines(double percentile) {
