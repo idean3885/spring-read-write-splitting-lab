@@ -20,9 +20,9 @@ public record StackResult(
   public String verdict() {
     if (reads == 0) return "조회 없음";
     double share = replicaShareOfReads();
-    if (share == 0) return "소스 하나가 조회와 쓰기를 모두 받았습니다";
-    if (share == 1 && replica.inserts() == 0) return "조회는 레플리카, 쓰기는 소스가 받았습니다";
-    return "조회 일부만 레플리카가 받았습니다 (레플리카 비율 %.1f%%)".formatted(share * 100);
+    if (share == 0) return "소스 하나가 조회와 쓰기를 모두 받았습니다.";
+    if (share == 1 && replica.inserts() == 0) return "조회는 레플리카, 쓰기는 소스가 받았습니다.";
+    return "조회 일부만 레플리카가 받았습니다(레플리카 비율 %.1f%%).".formatted(share * 100);
   }
 
   public record Latency(double p50, double p95, double p99, double max, double[] curve) {

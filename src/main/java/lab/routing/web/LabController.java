@@ -56,7 +56,7 @@ public class LabController {
   public ResponseEntity<String> report(@RequestParam(required = false) Integer id) {
     var run = runner.runs().stream().filter(r -> id == null || r.id() == id).findFirst();
     return run.map(r -> ResponseEntity.ok(ReportHtml.render(r)))
-        .orElse(ResponseEntity.status(404).body("<p>아직 실행 결과가 없습니다</p>"));
+        .orElse(ResponseEntity.status(404).body("<p>아직 실행 결과가 없습니다.</p>"));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
