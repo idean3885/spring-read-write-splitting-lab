@@ -8,7 +8,7 @@ lab:
     password: lab
     admin-username: root   # 문장 통계 · 복제 상태 조회용
     admin-password: root
-    pool-size: 10
+    pool-size: 40   # 작업자 수보다 크게 둔다. 풀 대기가 섞이면 DB 부하가 아니라 줄 서기를 잰다
 spring:
   jpa:
     open-in-view: false

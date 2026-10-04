@@ -16,4 +16,6 @@ public class UsageSample {
     this.collectedAt = collectedAt;
     this.valueMb = valueMb;
   }
+
+  public Long id() { return id; }
 }

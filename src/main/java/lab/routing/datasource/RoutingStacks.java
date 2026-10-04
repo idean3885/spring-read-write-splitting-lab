@@ -18,41 +18,41 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class RoutingStacks {
 
-  public static final String BROKEN = "broken";
-  public static final String FIXED = "fixed";
+  public static final String SINGLE = "single";
+  public static final String SPLIT = "split";
 
   @Bean @Primary
-  DataSource brokenDataSource(LabDbProperties p) {
-    return routing(p, "sample_broken");
+  DataSource singleDataSource(LabDbProperties p) {
+    return hikari(p, p.source().jdbcUrl("sample_single"), "single-source");
   }
 
   @Bean @Primary
-  LocalContainerEntityManagerFactoryBean brokenEntityManagerFactory(@Qualifier("brokenDataSource") DataSource ds) {
-    return emf(BROKEN, ds);
+  LocalContainerEntityManagerFactoryBean singleEntityManagerFactory(@Qualifier("singleDataSource") DataSource ds) {
+    return emf(SINGLE, ds);
   }
 
   @Bean @Primary
-  PlatformTransactionManager brokenTx(@Qualifier("brokenEntityManagerFactory") LocalContainerEntityManagerFactoryBean emf) {
+  PlatformTransactionManager singleTx(@Qualifier("singleEntityManagerFactory") LocalContainerEntityManagerFactoryBean emf) {
     return new JpaTransactionManager(emf.getObject());
   }
 
   @Bean
-  DataSource fixedDataSource(LabDbProperties p) {
-    // why: broken 과의 차이는 이 한 줄이다. 커넥션 획득을 첫 쿼리 시점으로 미뤄 readOnly 표시가 켜진 뒤 키를 고르게 한다
-    return new LazyConnectionDataSourceProxy(routing(p, "sample_fixed"));
+  DataSource splitDataSource(LabDbProperties p) {
+    // why: JpaTransactionManager 는 readOnly 표시를 켜기 전에 커넥션부터 얻는다. 감싸지 않으면 키를 고르는 순간 표시가 꺼져 있어 늘 소스가 골라진다
+    return new LazyConnectionDataSourceProxy(routing(p, "sample_split"));
   }
 
   @Bean
-  LocalContainerEntityManagerFactoryBean fixedEntityManagerFactory(@Qualifier("fixedDataSource") DataSource ds) {
-    return emf(FIXED, ds);
+  LocalContainerEntityManagerFactoryBean splitEntityManagerFactory(@Qualifier("splitDataSource") DataSource ds) {
+    return emf(SPLIT, ds);
   }
 
   @Bean
-  PlatformTransactionManager fixedTx(@Qualifier("fixedEntityManagerFactory") LocalContainerEntityManagerFactoryBean emf) {
+  PlatformTransactionManager splitTx(@Qualifier("splitEntityManagerFactory") LocalContainerEntityManagerFactoryBean emf) {
     return new JpaTransactionManager(emf.getObject());
   }
 
-  private static DataSource routing(LabDbProperties p, String schema) {
+  public static DataSource routing(LabDbProperties p, String schema) {
     var routing = new ReplicaRoutingDataSource();
     var source = hikari(p, p.source().jdbcUrl(schema), schema + "-source");
     routing.setTargetDataSources(Map.of(Node.SOURCE, source, Node.REPLICA, hikari(p, p.replica().jdbcUrl(schema), schema + "-replica")));
@@ -69,7 +69,7 @@ public class RoutingStacks {
     return ds;
   }
 
-  private static LocalContainerEntityManagerFactoryBean emf(String unit, DataSource ds) {
+  public static LocalContainerEntityManagerFactoryBean emf(String unit, DataSource ds) {
     var emf = new LocalContainerEntityManagerFactoryBean();
     emf.setPersistenceUnitName(unit);
     emf.setDataSource(ds);

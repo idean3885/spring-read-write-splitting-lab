@@ -5,8 +5,8 @@ import java.util.Map;
 import lab.routing.load.LoadParams;
 import lab.routing.load.LoadRunner;
 import lab.routing.load.ServerProbe;
-import lab.routing.usage.BrokenUsageOps;
-import lab.routing.usage.FixedUsageOps;
+import lab.routing.usage.SingleUsageOps;
+import lab.routing.usage.SplitUsageOps;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,14 +15,14 @@ import org.springframework.web.bind.annotation.*;
 public class LabController {
 
   private final LoadRunner runner;
-  private final BrokenUsageOps broken;
-  private final FixedUsageOps fixed;
+  private final SingleUsageOps single;
+  private final SplitUsageOps split;
   private final ServerProbe probe;
 
-  public LabController(LoadRunner runner, BrokenUsageOps broken, FixedUsageOps fixed, ServerProbe probe) {
+  public LabController(LoadRunner runner, SingleUsageOps single, SplitUsageOps split, ServerProbe probe) {
     this.runner = runner;
-    this.broken = broken;
-    this.fixed = fixed;
+    this.single = single;
+    this.split = split;
     this.probe = probe;
   }
 
@@ -31,7 +31,7 @@ public class LabController {
 
   @GetMapping("/api/check")
   public Map<String, Object> check() {
-    return Map.of("brokenReadOnlyServerId", broken.whereAmI(), "fixedReadOnlyServerId", fixed.whereAmI(),
+    return Map.of("singleReadOnlyServerId", single.whereAmI(), "splitReadOnlyServerId", split.whereAmI(),
         "replicaLagSec", probe.replicaLagSeconds());
   }
 
@@ -39,6 +39,11 @@ public class LabController {
   public ResponseEntity<?> start(@RequestBody LoadParams params) {
     return runner.start(params) ? ResponseEntity.accepted().build()
         : ResponseEntity.status(409).body(Map.of("error", "이미 실행 중"));
+  }
+
+  @PostMapping("/api/runs/{id}/cpu")
+  public ResponseEntity<?> cpu(@PathVariable int id, @RequestBody Map<String, LoadRunner.Cpu> cpu) {
+    return runner.attachCpu(id, cpu) ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
   }
 
   @GetMapping("/api/progress")
@@ -51,7 +56,7 @@ public class LabController {
   public ResponseEntity<String> report(@RequestParam(required = false) Integer id) {
     var run = runner.runs().stream().filter(r -> id == null || r.id() == id).findFirst();
     return run.map(r -> ResponseEntity.ok(ReportHtml.render(r)))
-        .orElse(ResponseEntity.status(404).body("<p>아직 실행 결과가 없다</p>"));
+        .orElse(ResponseEntity.status(404).body("<p>아직 실행 결과가 없습니다.</p>"));
   }
 
   @ExceptionHandler(IllegalArgumentException.class)

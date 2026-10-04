@@ -18,7 +18,7 @@ class ReplicaRoutingDataSourceSpec extends Specification {
     given:
     TransactionSynchronizationManager.setCurrentTransactionReadOnly(true)
 
-    expect: "키를 고르는 규칙 자체는 맞다. 결함은 이 규칙이 불리는 시점에 있어서 단위 명세는 결함이 있어도 통과한다"
+    expect: "규칙만 본다. 이 규칙이 언제 불리는지는 단위 층에서 보이지 않아 통합 명세가 확인한다"
     sut.determineCurrentLookupKey() == REPLICA
   }
 
